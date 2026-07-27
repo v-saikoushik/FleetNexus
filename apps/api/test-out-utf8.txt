@@ -1,0 +1,23 @@
+﻿FAIL test/app.e2e-spec.ts (8.102 s)
+  HealthController (e2e)
+    ├ù /api/health (GET) (4393 ms)
+System.Management.Automation.RemoteException
+  ΓùÅ HealthController (e2e) ΓÇ║ /api/health (GET)
+System.Management.Automation.RemoteException
+    TypeError: (0 , supertest_1.default) is not a function
+System.Management.Automation.RemoteException
+    [0m [90m 30 |[39m
+     [90m 31 |[39m   it([32m'/api/health (GET)'[39m[33m,[39m () [33m=>[39m {
+    [31m[1m>[22m[39m[90m 32 |[39m     [36mreturn[39m request(app[33m.[39mgetHttpServer())[33m.[39m[36mget[39m([32m'/api/health'[39m)[33m.[39mexpect([35m200[39m)[33m;[39m
+     [90m    |[39m                   [31m[1m^[22m[39m
+     [90m 33 |[39m   })[33m;[39m
+     [90m 34 |[39m })[33m;[39m
+     [90m 35 |[39m[0m
+System.Management.Automation.RemoteException
+      at Object.<anonymous> (app.e2e-spec.ts:32:19)
+System.Management.Automation.RemoteException
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 1 total
+Snapshots:   0 total
+Time:        8.465 s, estimated 11 s
+Ran all test suites.

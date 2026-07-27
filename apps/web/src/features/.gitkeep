@@ -1,0 +1,2 @@
+# Feature modules will live here (loads, trips, payments, etc.).
+# Keep each feature self-contained: api/, components/, hooks/, types/.

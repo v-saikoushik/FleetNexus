@@ -1,0 +1,13 @@
+// FleetNexus Prisma Schema
+//
+// Models intentionally omitted — foundation only.
+// Add domain models in a later phase (organizations, trips, payments, etc.).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}

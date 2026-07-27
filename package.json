@@ -1,0 +1,36 @@
+{
+  "name": "fleetnexus",
+  "version": "0.1.0",
+  "private": true,
+  "description": "AI-powered Transport ERP connecting factories, lorry unions, fleet owners, and drivers",
+  "packageManager": "pnpm@9.15.4",
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=9.0.0"
+  },
+  "scripts": {
+    "dev": "pnpm run --parallel --filter @fleetnexus/web --filter @fleetnexus/api dev",
+    "dev:web": "pnpm --filter @fleetnexus/web dev",
+    "dev:api": "pnpm --filter @fleetnexus/api dev",
+    "build": "pnpm --filter @fleetnexus/shared build && pnpm --filter @fleetnexus/ui build && pnpm --filter @fleetnexus/web build && pnpm --filter @fleetnexus/api build",
+    "build:web": "pnpm --filter @fleetnexus/web build",
+    "build:api": "pnpm --filter @fleetnexus/api build",
+    "lint": "pnpm -r --if-present lint",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,yml,yaml,css}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md,yml,yaml,css}\"",
+    "test": "pnpm -r --if-present test",
+    "prisma:generate": "pnpm --filter @fleetnexus/api prisma:generate",
+    "prisma:migrate": "pnpm --filter @fleetnexus/api prisma:migrate",
+    "prisma:studio": "pnpm --filter @fleetnexus/api prisma:studio",
+    "docker:up": "docker compose -f docker/docker-compose.yml up -d",
+    "docker:down": "docker compose -f docker/docker-compose.yml down",
+    "docker:logs": "docker compose -f docker/docker-compose.yml logs -f",
+    "clean": "pnpm -r --if-present clean && rimraf node_modules"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.5",
+    "prettier": "^3.4.2",
+    "rimraf": "^6.0.1",
+    "typescript": "^5.7.3"
+  }
+}
