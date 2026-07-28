@@ -2,7 +2,8 @@ import { Module } from '@nestjs/common';
 
 /**
  * Auth module placeholder.
- * JWT + RBAC will be implemented in a later phase — do not add business logic here yet.
+ * JWT strategies, guards, and RBAC will be implemented in a later sprint.
+ * Keep authentication concerns here — do not leak them into feature modules.
  */
 @Module({})
 export class AuthModule {}

@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, RequestMethod } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { LoggerModule } from 'nestjs-pino';
 import * as path from 'node:path';
@@ -6,6 +6,7 @@ import { AppConfigModule } from './config/config.module';
 import { DatabaseModule } from './database/database.module';
 import { AuthModule } from './auth/auth.module';
 import { HealthModule } from './modules/health/health.module';
+
 import { validateEnv } from './config/env.validation';
 
 @Module({
@@ -19,7 +20,9 @@ import { validateEnv } from './config/env.validation';
       ],
       validate: validateEnv,
     }),
+    // path-to-regexp v8 — NestJS 11 requires named wildcards ({*splat}) instead of the legacy (*) glob.
     LoggerModule.forRoot({
+      forRoutes: [{ path: '{*splat}', method: RequestMethod.ALL }],
       pinoHttp: {
         transport:
           process.env.NODE_ENV !== 'production'
@@ -33,6 +36,7 @@ import { validateEnv } from './config/env.validation';
     DatabaseModule,
     AuthModule,
     HealthModule,
+
   ],
 })
 export class AppModule {}

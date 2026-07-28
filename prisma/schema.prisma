@@ -1,7 +1,14 @@
 // FleetNexus Prisma Schema
 //
 // Models intentionally omitted — foundation only.
-// Add domain models in a later phase (organizations, trips, payments, etc.).
+// Add domain models in a later phase (organizations, users, roles, trips, etc.).
+//
+// Workflow:
+//   pnpm docker:up            # start PostgreSQL
+//   pnpm prisma:generate      # generate client after schema changes
+//   pnpm prisma:migrate       # create/apply migrations in development
+//   pnpm prisma:migrate:deploy # apply migrations in CI/production
+//   pnpm prisma:studio        # browse data locally
 
 generator client {
   provider = "prisma-client-js"
