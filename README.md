@@ -1,5 +1,9 @@
 # FleetNexus
 
+## Current status
+
+The foundation, identity schema, and authentication flow are implemented. Public registration always creates a `FLEET_OWNER`; roles cannot be selected by public clients. Vehicle, driver, trip, finance, documents, reporting, and integrations are not implemented yet.
+
 AI-powered Transport ERP that connects factories, lorry unions, fleet owners, and drivers into a unified logistics lifecycle:
 
 Factory → Load Request → Union Allocation → Trip → Expenses → Documents → Payments → Reports
@@ -11,6 +15,13 @@ This repository currently contains the **engineering foundation only** (monorepo
 - Node.js **20+**
 - [pnpm](https://pnpm.io/) **9+** (`npm install -g pnpm`)
 - Docker Desktop (for local PostgreSQL)
+
+If `pnpm` is not available on your PATH, enable the Node.js Corepack shim once:
+
+```powershell
+corepack enable
+corepack pnpm --version
+```
 
 ## Installation
 
@@ -30,6 +41,9 @@ pnpm docker:up
 
 # 5. Generate Prisma Client
 pnpm prisma:generate
+
+# 6. Apply the existing migration
+pnpm prisma:migrate:deploy
 ```
 
 Windows PowerShell one-shot bootstrap:
@@ -109,6 +123,9 @@ Feature-based layout:
 
 ## Notes
 
-- No CRUD modules, domain APIs, Prisma models, or authentication logic are included yet.
+- Authentication endpoints: `POST /api/auth/register`, `POST /api/auth/login`, and `GET /api/auth/me`.
+- Passwords are bcrypt-hashed and never returned. Public clients cannot submit a role; privileged role assignment requires a future authenticated administration workflow.
 - The API exposes a health check at `GET /api/health` to verify the foundation.
+- PostgreSQL must be running and the identity migration applied for Prisma-backed authentication endpoints to work.
+- Business-domain modules, administrative role assignment, and integrations are not implemented yet.
 - Keep secrets out of git — use `.env` locally and never commit it.

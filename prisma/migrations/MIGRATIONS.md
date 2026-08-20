@@ -16,6 +16,4 @@ This folder contains Prisma migration history for FleetNexus.
 
 ## Status
 
-No migrations yet — domain models have not been defined.
-
-First migration will be created when the Identity module models (Organization, User, Role) are added to `schema.prisma`.
+Identity foundation migration: `Organization`, `User`, and `Role` / `OrganizationType` enums.

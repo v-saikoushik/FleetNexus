@@ -9,11 +9,9 @@ import { RoleModule } from './role/role.module';
  * Composes:
  *   - OrganizationModule  (multi-tenancy root entity)
  *   - UserModule          (system users)
- *   - RoleModule          (RBAC roles and permissions)
+ *   - RoleModule          (simple RBAC enum helpers)
  *
- * This module is intentionally infrastructure-only.
- * No controllers, no Prisma models, no authentication yet.
- * Business logic will be implemented in Sprint 2.
+ * Authentication / JWT lives in AuthModule. Full CRUD HTTP APIs can grow later.
  */
 @Module({
   imports: [OrganizationModule, UserModule, RoleModule],

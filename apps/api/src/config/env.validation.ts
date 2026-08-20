@@ -1,5 +1,14 @@
 import { plainToInstance, Transform } from 'class-transformer';
-import { IsEnum, IsInt, IsOptional, IsString, Max, Min, validateSync } from 'class-validator';
+import {
+  IsEnum,
+  IsInt,
+  IsOptional,
+  IsString,
+  Max,
+  Min,
+  MinLength,
+  validateSync,
+} from 'class-validator';
 
 enum NodeEnv {
   Development = 'development',
@@ -42,13 +51,21 @@ class EnvironmentVariables {
   @IsString()
   DATABASE_URL!: string;
 
+  /**
+   * JWT_SECRET must be set. The default is only for local dev convenience.
+   * Never use the default in production — the validation below enforces this.
+   */
   @IsString()
-  @IsOptional()
-  JWT_SECRET = 'change-me';
+  @MinLength(16, { message: 'JWT_SECRET must be at least 16 characters' })
+  JWT_SECRET = 'dev-change-me-minimum-16-chars!!';
 
   @IsString()
   @IsOptional()
   JWT_EXPIRES_IN = '7d';
+
+  @IsString()
+  @IsOptional()
+  JWT_REFRESH_EXPIRES_IN = '30d';
 }
 
 export function validateEnv(config: Record<string, unknown>) {

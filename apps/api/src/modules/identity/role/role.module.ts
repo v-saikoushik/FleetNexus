@@ -4,18 +4,12 @@ import { RoleService } from './role.service';
 import { RoleRepository } from './role.repository';
 
 /**
- * RoleModule — manages RBAC roles and permission assignments.
- *
- * Roles are organization-scoped in FleetNexus.
- * A User can have multiple Roles within their Organization.
+ * RoleModule — simple RBAC helpers around the Role enum on User.
  *
  * System roles (from @fleetnexus/shared):
- *   ADMIN, FACTORY_MANAGER, UNION_MANAGER, FLEET_OWNER, DRIVER
+ *   SUPER_ADMIN, FACTORY_MANAGER, UNION_MANAGER, FLEET_OWNER, DRIVER
  *
- * Sprint 2 will add:
- *   - Prisma model (Role, UserRole)
- *   - Role assignment endpoints
- *   - Permission checking utilities
+ * No separate permissions tables in the current foundation.
  */
 @Module({
   controllers: [RoleController],

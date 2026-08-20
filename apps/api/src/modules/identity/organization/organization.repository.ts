@@ -1,25 +1,46 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@/database/prisma.service';
+import type {
+  CreateOrganizationData,
+  IOrganization,
+  UpdateOrganizationData,
+} from './interfaces/organization.interface';
 
 /**
  * OrganizationRepository — data access layer for organizations.
- *
- * This class is the ONLY place that talks to Prisma for organization data.
- * Services must go through this repository — never call PrismaService directly.
- *
- * Follows the Repository pattern (interface segregation):
- *   - Raw Prisma types stay here; services receive domain types
- *
- * Methods to implement in Sprint 2:
- *   - create(data): Promise<Organization>
- *   - findById(id): Promise<Organization | null>
- *   - findBySlug(slug): Promise<Organization | null>
- *   - update(id, data): Promise<Organization>
- *   - softDelete(id): Promise<void>
+ * Sole Prisma touchpoint for organization data.
  */
 @Injectable()
 export class OrganizationRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  // Prisma queries will be added in Sprint 2 once schema models are defined.
+  async create(data: CreateOrganizationData): Promise<IOrganization> {
+    return this.prisma.organization.create({
+      data: {
+        name: data.name,
+        type: data.type,
+        email: data.email,
+        phone: data.phone,
+        address: data.address,
+        city: data.city,
+        state: data.state,
+        country: data.country ?? 'IN',
+      },
+    });
+  }
+
+  async findById(id: string): Promise<IOrganization | null> {
+    return this.prisma.organization.findUnique({ where: { id } });
+  }
+
+  async update(id: string, data: UpdateOrganizationData): Promise<IOrganization> {
+    return this.prisma.organization.update({ where: { id }, data });
+  }
+
+  async softDelete(id: string): Promise<void> {
+    await this.prisma.organization.update({
+      where: { id },
+      data: { isActive: false },
+    });
+  }
 }

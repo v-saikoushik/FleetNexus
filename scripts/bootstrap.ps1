@@ -11,6 +11,7 @@ if (-not (Test-Path .env)) {
 pnpm install
 pnpm docker:up
 pnpm prisma:generate
+pnpm prisma:migrate:deploy
 
 Write-Host 'FleetNexus foundation is ready.'
 Write-Host '  Web:  pnpm dev:web'

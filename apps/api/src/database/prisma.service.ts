@@ -2,8 +2,7 @@ import { Injectable, OnModuleDestroy, OnModuleInit, Logger } from '@nestjs/commo
 import { PrismaClient } from '@prisma/client';
 
 /**
- * Prisma database client wrapper.
- * Domain models will be added in a later phase — client connects with an empty schema for now.
+ * Prisma database client wrapper for PostgreSQL.
  */
 @Injectable()
 export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {

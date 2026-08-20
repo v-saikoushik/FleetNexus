@@ -1,14 +1,4 @@
 // FleetNexus Prisma Schema
-//
-// Models intentionally omitted — foundation only.
-// Add domain models in a later phase (organizations, users, roles, trips, etc.).
-//
-// Workflow:
-//   pnpm docker:up            # start PostgreSQL
-//   pnpm prisma:generate      # generate client after schema changes
-//   pnpm prisma:migrate       # create/apply migrations in development
-//   pnpm prisma:migrate:deploy # apply migrations in CI/production
-//   pnpm prisma:studio        # browse data locally
 
 generator client {
   provider = "prisma-client-js"
@@ -17,4 +7,76 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Enums
+// ─────────────────────────────────────────────────────────────────────────────
+
+enum OrganizationType {
+  FACTORY
+  UNION
+  FLEET_OWNER
+}
+
+enum Role {
+  SUPER_ADMIN
+  FACTORY_MANAGER
+  UNION_MANAGER
+  FLEET_OWNER
+  DRIVER
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Organization
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Organization {
+  id        String           @id @default(uuid())
+  name      String
+  type      OrganizationType
+  email     String?
+  phone     String?
+  address   String?
+  city      String?
+  state     String?
+  country   String           @default("IN")
+  isActive  Boolean          @default(true)
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  // Relations
+  users User[]
+
+  @@index([type])
+  @@index([isActive])
+  @@map("organizations")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// User
+// ─────────────────────────────────────────────────────────────────────────────
+
+model User {
+  id             String        @id @default(uuid())
+  organizationId String?
+  role           Role          @default(DRIVER)
+  firstName      String
+  lastName       String
+  email          String        @unique
+  phone          String?       @unique
+  passwordHash   String
+  isActive       Boolean       @default(true)
+  lastLoginAt    DateTime?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  // Relations
+  organization Organization? @relation(fields: [organizationId], references: [id])
+
+  @@index([email])
+  @@index([organizationId])
+  @@index([role])
+  @@index([isActive])
+  @@map("users")
 }

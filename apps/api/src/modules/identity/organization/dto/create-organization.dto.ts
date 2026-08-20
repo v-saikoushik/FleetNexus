@@ -1,9 +1,8 @@
-import { IsString, MaxLength, MinLength, Matches, IsOptional } from 'class-validator';
+import { IsEmail, IsEnum, IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
+import { ORGANIZATION_TYPES, type OrganizationType } from '@fleetnexus/shared';
 import {
   ORGANIZATION_NAME_MAX_LENGTH,
   ORGANIZATION_NAME_MIN_LENGTH,
-  ORGANIZATION_SLUG_MAX_LENGTH,
-  ORGANIZATION_SLUG_PATTERN,
 } from '../constants/organization.constants';
 
 /**
@@ -16,15 +15,36 @@ export class CreateOrganizationDto {
   @MaxLength(ORGANIZATION_NAME_MAX_LENGTH)
   name!: string;
 
-  /**
-   * URL-safe slug for the organization.
-   * If not provided, will be auto-generated from the name.
-   */
+  @IsEnum(ORGANIZATION_TYPES)
+  type!: OrganizationType;
+
+  @IsOptional()
+  @IsEmail()
+  @MaxLength(254)
+  email?: string;
+
   @IsOptional()
   @IsString()
-  @MaxLength(ORGANIZATION_SLUG_MAX_LENGTH)
-  @Matches(ORGANIZATION_SLUG_PATTERN, {
-    message: 'Slug must be lowercase alphanumeric with hyphens (e.g. my-org)',
-  })
-  slug?: string;
+  @MaxLength(20)
+  phone?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  address?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  city?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  state?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(2)
+  country?: string;
 }

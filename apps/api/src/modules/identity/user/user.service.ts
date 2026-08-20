@@ -1,24 +1,45 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { UserRepository } from './user.repository';
+import type { CreateUserData, IUser, UpdateUserData } from './interfaces/user.interface';
 
 /**
- * UserService — business logic layer for system users.
- *
- * Responsibilities (to be implemented in Sprint 2):
- *   - Create a new user (with password hashing)
- *   - Find user by ID, email, or organization
- *   - Update user profile
- *   - Soft-deactivate a user
- *   - Look up user by credentials (for auth module consumption)
- *
- * Single Responsibility:
- *   - This service handles user CRUD and lookup only.
- *   - Password hashing strategy belongs here (not in auth).
- *   - JWT issuance belongs in AuthService (not here).
+ * UserService — business logic for system users.
+ * Password hashing for auth registration lives in AuthService;
+ * this service focuses on user lookup and profile management.
  */
 @Injectable()
 export class UserService {
   constructor(private readonly userRepository: UserRepository) {}
 
-  // Methods will be implemented in Sprint 2 once Prisma model is defined.
+  create(data: CreateUserData): Promise<IUser> {
+    return this.userRepository.create(data);
+  }
+
+  async findByIdOrThrow(id: string): Promise<IUser> {
+    const user = await this.userRepository.findById(id);
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+    return user;
+  }
+
+  findByEmail(email: string): Promise<IUser | null> {
+    return this.userRepository.findByEmail(email);
+  }
+
+  findByPhone(phone: string): Promise<IUser | null> {
+    return this.userRepository.findByPhone(phone);
+  }
+
+  findAllByOrganization(organizationId: string): Promise<IUser[]> {
+    return this.userRepository.findAllByOrganization(organizationId);
+  }
+
+  update(id: string, data: UpdateUserData): Promise<IUser> {
+    return this.userRepository.update(id, data);
+  }
+
+  softDelete(id: string): Promise<void> {
+    return this.userRepository.softDelete(id);
+  }
 }

@@ -31,4 +31,15 @@ describe('HealthController (e2e)', () => {
   it('/api/health (GET)', () => {
     return request(app.getHttpServer()).get('/api/health').expect(200);
   });
+
+  it('/api/auth/me (GET) rejects a missing token', () => {
+    return request(app.getHttpServer()).get('/api/auth/me').expect(401);
+  });
+
+  it('/api/auth/me (GET) rejects an invalid token', () => {
+    return request(app.getHttpServer())
+      .get('/api/auth/me')
+      .set('Authorization', 'Bearer invalid-token')
+      .expect(401);
+  });
 });

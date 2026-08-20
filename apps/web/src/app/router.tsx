@@ -1,17 +1,12 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
-import { PublicLayout } from '@/layouts/public-layout';
+import { DashboardLayout, PublicLayout } from '@/layouts';
 import { HomePage } from '@/pages/home-page';
+import { LoginPage } from '@/pages/login-page';
+import { RegisterPage } from '@/pages/register-page';
+import { DashboardPage } from '@/pages/dashboard-page';
 import { NotFoundPage } from '@/pages/not-found-page';
+import { ProtectedRoute } from '@/features/auth';
 
-/**
- * AppRouter — defines all application routes grouped by layout.
- *
- * Route groups:
- *   Public routes  — use PublicLayout (landing, auth pages, etc.)
- *   Private routes — will use DashboardLayout once auth is in place
- *
- * Pattern: add new routes to the correct layout group, not as flat siblings.
- */
 export function AppRouter() {
   return (
     <BrowserRouter>
@@ -20,14 +15,16 @@ export function AppRouter() {
         <Route element={<PublicLayout />}>
           <Route index element={<HomePage />} />
           <Route path="/home" element={<Navigate to="/" replace />} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
         </Route>
 
-        {/* ── Authenticated routes (placeholder) ────────────── */}
-        {/* Uncomment when DashboardLayout + auth guards are ready:
-        <Route element={<RequireAuth><DashboardLayout /></RequireAuth>}>
-          <Route path="/dashboard" element={<DashboardPage />} />
+        {/* ── Authenticated routes ──────────────────────────── */}
+        <Route element={<ProtectedRoute />}>
+          <Route element={<DashboardLayout />}>
+            <Route path="/dashboard" element={<DashboardPage />} />
+          </Route>
         </Route>
-        */}
 
         {/* ── Fallback ───────────────────────────────────────── */}
         <Route path="*" element={<NotFoundPage />} />
