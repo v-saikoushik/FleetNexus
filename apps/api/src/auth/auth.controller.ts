@@ -3,7 +3,9 @@ import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { RolesGuard } from './guards/roles.guard';
 import { CurrentUser } from './decorators/current-user.decorator';
+import { Roles } from './decorators/roles.decorator';
 import type { RequestUser } from './strategies/jwt.strategy';
 
 @Controller('auth')
@@ -52,6 +54,20 @@ export class AuthController {
     return {
       success: true,
       data: profile,
+    };
+  }
+
+  /**
+   * GET /api/auth/rbac-check
+   * Minimal protected endpoint that verifies the reusable JWT + role guard setup.
+   */
+  @Get('rbac-check')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('SUPER_ADMIN')
+  rbacCheck() {
+    return {
+      success: true,
+      data: { authorized: true },
     };
   }
 }
