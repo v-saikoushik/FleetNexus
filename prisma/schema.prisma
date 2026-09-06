@@ -62,13 +62,36 @@ enum RateBasis {
 }
 
 enum ExpenseType {
+  FUEL
   TOLL
   DRIVER_ALLOWANCE
+  DRIVER_SALARY
   MAINTENANCE
+  REPAIRS
+  TYRES
+  INSURANCE
+  PERMIT_TAX
   LOADING
   UNLOADING
   COMMISSION
+  PARKING
+  FOOD_ALLOWANCE
   OTHER
+}
+
+enum TripStatus {
+  PLANNED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PENDING
+  PARTIAL
+  PAID
+  OVERDUE
+  CANCELLED
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -90,19 +113,26 @@ model Organization {
   updatedAt DateTime         @updatedAt
 
   // Relations
-  users           User[]
-  vehicles        Vehicle[]
-  locations       Location[]
-  routes          Route[]
-  commodities     Commodity[]
-  freightRates    FreightRate[]
+  users            User[]
+  vehicles         Vehicle[]
+  locations        Location[]
+  routes           Route[]
+  commodities      Commodity[]
+  freightRates     FreightRate[]
   fuelTransactions FuelTransaction[]
-  expenses        Expense[]
+  expenses         Expense[]
+  customers        Customer[]
+  trips            Trip[]
+  payments         Payment[]
 
   @@index([type])
   @@index([isActive])
   @@map("organizations")
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Vehicle
+// ─────────────────────────────────────────────────────────────────────────────
 
 model Vehicle {
   id                 String        @id @default(uuid())
@@ -116,14 +146,17 @@ model Vehicle {
   engineNumber       String?
   fuelType           FuelType
   capacityTons       Decimal       @db.Decimal(10, 2)
+  // Fuel efficiency baseline set by owner — used for cost insight comparisons
+  targetKmPerLitre   Decimal?      @db.Decimal(6, 2)
   status             VehicleStatus @default(ACTIVE)
   notes              String?
   createdAt          DateTime      @default(now())
   updatedAt          DateTime      @updatedAt
 
-  organization Organization @relation(fields: [organizationId], references: [id])
+  organization     Organization      @relation(fields: [organizationId], references: [id])
   fuelTransactions FuelTransaction[]
   expenses         Expense[]
+  trips            Trip[]
 
   @@unique([organizationId, registrationNumber])
   @@index([organizationId, status])
@@ -135,18 +168,18 @@ model Vehicle {
 // ─────────────────────────────────────────────────────────────────────────────
 
 model User {
-  id             String        @id @default(uuid())
+  id             String    @id @default(uuid())
   organizationId String?
-  role           Role          @default(DRIVER)
+  role           Role      @default(DRIVER)
   firstName      String
   lastName       String
-  email          String        @unique
-  phone          String?       @unique
+  email          String    @unique
+  phone          String?   @unique
   passwordHash   String
-  isActive       Boolean       @default(true)
+  isActive       Boolean   @default(true)
   lastLoginAt    DateTime?
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
   // Relations
   organization Organization? @relation(fields: [organizationId], references: [id])
@@ -163,44 +196,45 @@ model User {
 // ─────────────────────────────────────────────────────────────────────────────
 
 model Location {
-  id             String       @id @default(uuid())
+  id             String   @id @default(uuid())
   organizationId String
   name           String
   address        String?
   city           String?
   state          String?
-  latitude       Decimal?     @db.Decimal(10, 8)
-  longitude      Decimal?     @db.Decimal(11, 8)
+  latitude       Decimal? @db.Decimal(10, 8)
+  longitude      Decimal? @db.Decimal(11, 8)
   notes          String?
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
-  organization   Organization @relation(fields: [organizationId], references: [id])
-  routesOrigin   Route[]      @relation("RouteOrigin")
-  routesDest     Route[]      @relation("RouteDestination")
+  organization Organization @relation(fields: [organizationId], references: [id])
+  routesOrigin  Route[]     @relation("RouteOrigin")
+  routesDest    Route[]     @relation("RouteDestination")
 
   @@index([organizationId])
   @@map("locations")
 }
 
 model Route {
-  id                    String        @id @default(uuid())
+  id                    String   @id @default(uuid())
   organizationId        String
   originLocationId      String
   destinationLocationId String
-  estimatedDistance     Decimal?      @db.Decimal(10, 2)
-  typicalDurationHours  Decimal?      @db.Decimal(8, 2)
+  estimatedDistance     Decimal? @db.Decimal(10, 2)
+  typicalDurationHours  Decimal? @db.Decimal(8, 2)
   preferredRoute        String?
-  tollEstimate          Decimal?      @db.Decimal(10, 2)
+  tollEstimate          Decimal? @db.Decimal(10, 2)
   notes                 String?
-  createdAt             DateTime      @default(now())
-  updatedAt             DateTime      @updatedAt
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
 
-  organization          Organization  @relation(fields: [organizationId], references: [id])
-  originLocation        Location      @relation("RouteOrigin", fields: [originLocationId], references: [id])
-  destinationLocation   Location      @relation("RouteDestination", fields: [destinationLocationId], references: [id])
-  freightRates          FreightRate[]
-  expenses              Expense[]
+  organization        Organization  @relation(fields: [organizationId], references: [id])
+  originLocation      Location      @relation("RouteOrigin", fields: [originLocationId], references: [id])
+  destinationLocation Location      @relation("RouteDestination", fields: [destinationLocationId], references: [id])
+  freightRates        FreightRate[]
+  expenses            Expense[]
+  trips               Trip[]
 
   @@index([organizationId])
   @@index([originLocationId, destinationLocationId])
@@ -208,85 +242,217 @@ model Route {
 }
 
 model Commodity {
-  id             String        @id @default(uuid())
+  id             String   @id @default(uuid())
   organizationId String
   name           String
   category       String?
   notes          String?
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
-  organization   Organization  @relation(fields: [organizationId], references: [id])
-  freightRates   FreightRate[]
+  organization Organization  @relation(fields: [organizationId], references: [id])
+  freightRates FreightRate[]
+  trips        Trip[]
 
   @@index([organizationId])
   @@map("commodities")
 }
 
 model FreightRate {
-  id             String       @id @default(uuid())
+  id             String      @id @default(uuid())
   organizationId String
   routeId        String
   commodityId    String?
   vehicleType    VehicleType?
-  freightAmount  Decimal      @db.Decimal(12, 2)
-  rateBasis      RateBasis    @default(PER_TON)
-  effectiveDate  DateTime     @default(now())
+  freightAmount  Decimal     @db.Decimal(12, 2)
+  rateBasis      RateBasis   @default(PER_TON)
+  effectiveDate  DateTime    @default(now())
   notes          String?
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
 
-  organization   Organization @relation(fields: [organizationId], references: [id])
-  route          Route        @relation(fields: [routeId], references: [id])
-  commodity      Commodity?   @relation(fields: [commodityId], references: [id])
+  organization Organization @relation(fields: [organizationId], references: [id])
+  route        Route        @relation(fields: [routeId], references: [id])
+  commodity    Commodity?   @relation(fields: [commodityId], references: [id])
 
   @@index([organizationId])
   @@index([routeId])
   @@map("freight_rates")
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Customer (Shipper / Load Giver)
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Customer {
+  id             String   @id @default(uuid())
+  organizationId String
+  name           String
+  contactName    String?
+  phone          String?
+  email          String?
+  address        String?
+  city           String?
+  state          String?
+  notes          String?
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+  trips        Trip[]
+  payments     Payment[]
+
+  @@index([organizationId])
+  @@index([organizationId, isActive])
+  @@map("customers")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Trip (Central Financial Entity)
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Trip {
+  id             String     @id @default(uuid())
+  organizationId String
+  vehicleId      String
+  routeId        String?
+  customerId     String?
+  commodityId    String?
+  tripNumber     String
+  status         TripStatus @default(PLANNED)
+
+  // Key dates
+  startDate DateTime
+  endDate   DateTime?
+
+  // Denormalized origin/destination for historical memory (survives route deletion)
+  originName      String
+  destinationName String
+
+  // Distance
+  estimatedDistanceKm Decimal? @db.Decimal(10, 2)
+  actualDistanceKm    Decimal? @db.Decimal(10, 2)
+
+  // Load economics
+  loadWeightTons    Decimal? @db.Decimal(10, 2)
+  estimatedFreight  Decimal? @db.Decimal(12, 2)
+  actualFreight     Decimal? @db.Decimal(12, 2)
+
+  // Driver (optional link + free-text name for history)
+  driverName   String?
+  driverUserId String?
+
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+  vehicle      Vehicle      @relation(fields: [vehicleId], references: [id])
+  route        Route?       @relation(fields: [routeId], references: [id])
+  customer     Customer?    @relation(fields: [customerId], references: [id])
+  commodity    Commodity?   @relation(fields: [commodityId], references: [id])
+
+  fuelTransactions FuelTransaction[]
+  expenses         Expense[]
+  payments         Payment[]
+
+  @@unique([organizationId, tripNumber])
+  @@index([organizationId])
+  @@index([vehicleId])
+  @@index([customerId])
+  @@index([status])
+  @@index([startDate])
+  @@map("trips")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Payment (Freight Collection)
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Payment {
+  id              String        @id @default(uuid())
+  organizationId  String
+  tripId          String
+  customerId      String?
+  amount          Decimal       @db.Decimal(12, 2)
+  status          PaymentStatus @default(PENDING)
+  paymentDate     DateTime?
+  dueDate         DateTime?
+  referenceNumber String?
+  notes           String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+  trip         Trip         @relation(fields: [tripId], references: [id])
+  customer     Customer?    @relation(fields: [customerId], references: [id])
+
+  @@index([organizationId])
+  @@index([tripId])
+  @@index([status])
+  @@index([paymentDate])
+  @@map("payments")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Fuel Transactions
+// ─────────────────────────────────────────────────────────────────────────────
+
 model FuelTransaction {
-  id              String       @id @default(uuid())
+  id              String   @id @default(uuid())
   organizationId  String
   vehicleId       String
-  date            DateTime     @default(now())
-  litres          Decimal      @db.Decimal(10, 2)
-  totalAmount     Decimal      @db.Decimal(12, 2)
-  pricePerLitre   Decimal?     @db.Decimal(8, 2)
+  tripId          String?
+  date            DateTime @default(now())
+  litres          Decimal  @db.Decimal(10, 2)
+  totalAmount     Decimal  @db.Decimal(12, 2)
+  pricePerLitre   Decimal? @db.Decimal(8, 2)
   fuelStation     String?
   odometerReading Int?
   receiptRef      String?
   notes           String?
-  createdAt       DateTime     @default(now())
-  updatedAt       DateTime     @updatedAt
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
-  organization    Organization @relation(fields: [organizationId], references: [id])
-  vehicle         Vehicle      @relation(fields: [vehicleId], references: [id])
+  organization Organization @relation(fields: [organizationId], references: [id])
+  vehicle      Vehicle      @relation(fields: [vehicleId], references: [id])
+  trip         Trip?        @relation(fields: [tripId], references: [id])
 
   @@index([organizationId])
   @@index([vehicleId])
+  @@index([tripId])
   @@index([date])
   @@map("fuel_transactions")
 }
 
-model Expense {
-  id             String      @id @default(uuid())
-  organizationId String
-  vehicleId      String?
-  routeId        String?
-  type           ExpenseType
-  amount         Decimal     @db.Decimal(12, 2)
-  date           DateTime    @default(now())
-  notes          String?
-  createdAt      DateTime    @default(now())
-  updatedAt      DateTime    @updatedAt
+// ─────────────────────────────────────────────────────────────────────────────
+// Expenses
+// ─────────────────────────────────────────────────────────────────────────────
 
-  organization   Organization @relation(fields: [organizationId], references: [id])
-  vehicle        Vehicle?     @relation(fields: [vehicleId], references: [id])
-  route          Route?       @relation(fields: [routeId], references: [id])
+model Expense {
+  id              String      @id @default(uuid())
+  organizationId  String
+  vehicleId       String?
+  tripId          String?
+  routeId         String?
+  type            ExpenseType
+  amount          Decimal     @db.Decimal(12, 2)
+  date            DateTime    @default(now())
+  description     String?
+  referenceNumber String?
+  notes           String?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+  vehicle      Vehicle?     @relation(fields: [vehicleId], references: [id])
+  trip         Trip?        @relation(fields: [tripId], references: [id])
+  route        Route?       @relation(fields: [routeId], references: [id])
 
   @@index([organizationId])
   @@index([vehicleId])
+  @@index([tripId])
   @@index([routeId])
   @@index([date])
   @@map("expenses")
