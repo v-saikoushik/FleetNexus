@@ -24,6 +24,27 @@ export const ORGANIZATION_TYPES = ['FACTORY', 'UNION', 'FLEET_OWNER'] as const;
 
 export type OrganizationType = (typeof ORGANIZATION_TYPES)[number];
 
+export const VEHICLE_TYPES = [
+  'TRUCK',
+  'TRAILER',
+  'TANKER',
+  'TIPPER',
+  'CONTAINER',
+  'PICKUP',
+  'MINI_TRUCK',
+  'OTHER',
+] as const;
+
+export type VehicleType = (typeof VEHICLE_TYPES)[number];
+
+export const FUEL_TYPES = ['DIESEL', 'PETROL', 'CNG', 'LNG', 'ELECTRIC', 'OTHER'] as const;
+
+export type FuelType = (typeof FUEL_TYPES)[number];
+
+export const VEHICLE_STATUSES = ['ACTIVE', 'INACTIVE', 'MAINTENANCE'] as const;
+
+export type VehicleStatus = (typeof VEHICLE_STATUSES)[number];
+
 // ─── API Response Shapes ─────────────────────────────────────────────────────
 
 export type ApiSuccessResponse<T> = {

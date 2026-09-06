@@ -1,58 +1,11 @@
-// FleetNexus Prisma Schema
+const fs = require('fs');
+const path = require('path');
 
-generator client {
-  provider = "prisma-client-js"
-}
+const schemaPath = path.join(__dirname, 'prisma', 'schema.prisma');
+let schema = fs.readFileSync(schemaPath, 'utf8');
 
-datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Enums
-// ─────────────────────────────────────────────────────────────────────────────
-
-enum OrganizationType {
-  FACTORY
-  UNION
-  FLEET_OWNER
-}
-
-enum Role {
-  SUPER_ADMIN
-  FACTORY_MANAGER
-  UNION_MANAGER
-  FLEET_OWNER
-  DRIVER
-}
-
-enum VehicleType {
-  TRUCK
-  TRAILER
-  TANKER
-  TIPPER
-  CONTAINER
-  PICKUP
-  MINI_TRUCK
-  OTHER
-}
-
-enum FuelType {
-  DIESEL
-  PETROL
-  CNG
-  LNG
-  ELECTRIC
-  OTHER
-}
-
-enum VehicleStatus {
-  ACTIVE
-  INACTIVE
-  MAINTENANCE
-}
-
+// Add new Enums
+const enumsToAdd = `
 enum RateBasis {
   PER_TON
   PER_TRIP
@@ -70,26 +23,13 @@ enum ExpenseType {
   COMMISSION
   OTHER
 }
+`;
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Organization
-// ─────────────────────────────────────────────────────────────────────────────
+// Insert after existing enums
+schema = schema.replace('// ─────────────────────────────────────────────────────────────────────────────\n// Organization', enumsToAdd + '\n// ─────────────────────────────────────────────────────────────────────────────\n// Organization');
 
-model Organization {
-  id        String           @id @default(uuid())
-  name      String
-  type      OrganizationType
-  email     String?
-  phone     String?
-  address   String?
-  city      String?
-  state     String?
-  country   String           @default("IN")
-  isActive  Boolean          @default(true)
-  createdAt DateTime         @default(now())
-  updatedAt DateTime         @updatedAt
-
-  // Relations
+// Add new Relations to Organization
+const orgRelations = `  // Relations
   users           User[]
   vehicles        Vehicle[]
   locations       Location[]
@@ -97,67 +37,19 @@ model Organization {
   commodities     Commodity[]
   freightRates    FreightRate[]
   fuelTransactions FuelTransaction[]
-  expenses        Expense[]
+  expenses        Expense[]`;
 
-  @@index([type])
-  @@index([isActive])
-  @@map("organizations")
-}
+schema = schema.replace(/  \/\/ Relations\r?\n  users    User\[\]\r?\n  vehicles Vehicle\[\]/, orgRelations);
 
-model Vehicle {
-  id                 String        @id @default(uuid())
-  organizationId     String
-  registrationNumber String
-  vehicleType        VehicleType
-  manufacturer       String
-  model              String
-  manufactureYear    Int
-  chassisNumber      String?
-  engineNumber       String?
-  fuelType           FuelType
-  capacityTons       Decimal       @db.Decimal(10, 2)
-  status             VehicleStatus @default(ACTIVE)
-  notes              String?
-  createdAt          DateTime      @default(now())
-  updatedAt          DateTime      @updatedAt
-
-  organization Organization @relation(fields: [organizationId], references: [id])
+// Add new Relations to Vehicle
+const vehicleRelations = `  organization Organization @relation(fields: [organizationId], references: [id])
   fuelTransactions FuelTransaction[]
-  expenses         Expense[]
+  expenses         Expense[]`;
 
-  @@unique([organizationId, registrationNumber])
-  @@index([organizationId, status])
-  @@map("vehicles")
-}
+schema = schema.replace('  organization Organization @relation(fields: [organizationId], references: [id])', vehicleRelations);
 
-// ─────────────────────────────────────────────────────────────────────────────
-// User
-// ─────────────────────────────────────────────────────────────────────────────
-
-model User {
-  id             String        @id @default(uuid())
-  organizationId String?
-  role           Role          @default(DRIVER)
-  firstName      String
-  lastName       String
-  email          String        @unique
-  phone          String?       @unique
-  passwordHash   String
-  isActive       Boolean       @default(true)
-  lastLoginAt    DateTime?
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
-
-  // Relations
-  organization Organization? @relation(fields: [organizationId], references: [id])
-
-  @@index([email])
-  @@index([organizationId])
-  @@index([role])
-  @@index([isActive])
-  @@map("users")
-}
-
+// Add new Models at the end
+const modelsToAdd = `
 // ─────────────────────────────────────────────────────────────────────────────
 // Business Memory & Intelligence Foundation
 // ─────────────────────────────────────────────────────────────────────────────
@@ -291,3 +183,7 @@ model Expense {
   @@index([date])
   @@map("expenses")
 }
+`;
+
+fs.writeFileSync(schemaPath, schema + modelsToAdd);
+console.log('Schema updated successfully');

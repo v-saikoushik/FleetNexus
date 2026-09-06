@@ -7,6 +7,7 @@ import { DatabaseModule } from './database/database.module';
 import { AuthModule } from './auth/auth.module';
 import { HealthModule } from './modules/health/health.module';
 import { IdentityModule } from './modules/identity/identity.module';
+import { VehicleModule } from './modules/vehicles/vehicle.module';
 import { validateEnv } from './config/env.validation';
 
 @Module({
@@ -37,6 +38,7 @@ import { validateEnv } from './config/env.validation';
     AuthModule,
     HealthModule,
     IdentityModule,
+    VehicleModule,
   ],
 })
 export class AppModule {}
