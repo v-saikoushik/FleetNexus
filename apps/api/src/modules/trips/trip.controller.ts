@@ -19,7 +19,13 @@ import { TripService } from './trip.service';
 import { CreateTripDto } from './dto/create-trip.dto';
 import { UpdateTripDto } from './dto/update-trip.dto';
 
-const READ_ROLES = ['SUPER_ADMIN', 'FLEET_OWNER', 'FACTORY_MANAGER', 'UNION_MANAGER', 'DRIVER'] as const;
+const READ_ROLES = [
+  'SUPER_ADMIN',
+  'FLEET_OWNER',
+  'FACTORY_MANAGER',
+  'UNION_MANAGER',
+  'DRIVER',
+] as const;
 const MANAGE_ROLES = ['SUPER_ADMIN', 'FLEET_OWNER', 'FACTORY_MANAGER'] as const;
 
 @Controller('trips')
@@ -34,17 +40,27 @@ export class TripController {
     return { success: true, data: trip, message: 'Trip created successfully' };
   }
 
+  @Get('summary')
+  @Roles(...READ_ROLES)
+  async summary(@CurrentUser() user: RequestUser) {
+    return { success: true, data: await this.trips.getDashboardSummary(this.orgId(user)) };
+  }
+
   @Get()
   @Roles(...READ_ROLES)
   async findAll(
     @CurrentUser() user: RequestUser,
     @Query('vehicleId') vehicleId?: string,
+    @Query('driverId') driverId?: string,
+    @Query('customerId') customerId?: string,
     @Query('status') status?: string,
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
   ) {
     const trips = await this.trips.findAll(this.orgId(user), {
       vehicleId,
+      driverId,
+      customerId,
       status,
       startDate: startDate ? new Date(startDate) : undefined,
       endDate: endDate ? new Date(endDate) : undefined,

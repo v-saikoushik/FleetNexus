@@ -1,4 +1,5 @@
 import {
+  IsBoolean,
   IsDateString,
   IsEnum,
   IsNumber,
@@ -14,6 +15,10 @@ import { TRIP_STATUSES, type TripStatus } from '@fleetnexus/shared';
 export class CreateTripDto {
   @IsUUID()
   vehicleId!: string;
+
+  @IsOptional()
+  @IsUUID()
+  driverId?: string;
 
   @IsOptional()
   @IsUUID()
@@ -82,6 +87,10 @@ export class CreateTripDto {
   @IsOptional()
   @IsUUID()
   driverUserId?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  isEmptyReturn?: boolean;
 
   @IsOptional()
   @IsString()

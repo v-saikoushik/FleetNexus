@@ -8,6 +8,9 @@ import { AuthModule } from './auth/auth.module';
 import { HealthModule } from './modules/health/health.module';
 import { IdentityModule } from './modules/identity/identity.module';
 import { VehicleModule } from './modules/vehicles/vehicle.module';
+import { CustomerModule } from './modules/customers/customer.module';
+import { DriverModule } from './modules/drivers/driver.module';
+import { TripModule } from './modules/trips/trip.module';
 import { validateEnv } from './config/env.validation';
 
 @Module({
@@ -39,6 +42,9 @@ import { validateEnv } from './config/env.validation';
     HealthModule,
     IdentityModule,
     VehicleModule,
+    CustomerModule,
+    DriverModule,
+    TripModule,
   ],
 })
 export class AppModule {}

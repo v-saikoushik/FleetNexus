@@ -71,9 +71,19 @@ export const RATE_BASIS_OPTIONS = ['PER_TON', 'PER_TRIP', 'PER_KM', 'FLAT', 'OTH
 
 export type RateBasis = (typeof RATE_BASIS_OPTIONS)[number];
 
-export const TRIP_STATUSES = ['PLANNED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'] as const;
+export const TRIP_STATUSES = [
+  'PLANNED',
+  'ASSIGNED',
+  'IN_PROGRESS',
+  'COMPLETED',
+  'CANCELLED',
+] as const;
 
 export type TripStatus = (typeof TRIP_STATUSES)[number];
+
+export const DRIVER_STATUSES = ['ACTIVE', 'INACTIVE', 'ON_LEAVE', 'SUSPENDED'] as const;
+
+export type DriverStatus = (typeof DRIVER_STATUSES)[number];
 
 export const PAYMENT_STATUSES = ['PENDING', 'PARTIAL', 'PAID', 'OVERDUE', 'CANCELLED'] as const;
 

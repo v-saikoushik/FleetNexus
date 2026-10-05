@@ -81,9 +81,17 @@ enum ExpenseType {
 
 enum TripStatus {
   PLANNED
+  ASSIGNED
   IN_PROGRESS
   COMPLETED
   CANCELLED
+}
+
+enum DriverStatus {
+  ACTIVE
+  INACTIVE
+  ON_LEAVE
+  SUSPENDED
 }
 
 enum PaymentStatus {
@@ -115,6 +123,7 @@ model Organization {
   // Relations
   users            User[]
   vehicles         Vehicle[]
+  drivers          Driver[]
   locations        Location[]
   routes           Route[]
   commodities      Commodity[]
@@ -281,6 +290,34 @@ model FreightRate {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Driver (Operational resource — distinct from User auth accounts)
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Driver {
+  id              String       @id @default(uuid())
+  organizationId  String
+  name            String
+  phone           String
+  alternatePhone  String?
+  licenseNumber   String
+  licenseExpiry   DateTime?
+  dateOfBirth     DateTime?
+  address         String?
+  status          DriverStatus @default(ACTIVE)
+  notes           String?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+  trips        Trip[]
+
+  @@unique([organizationId, licenseNumber])
+  @@index([organizationId])
+  @@index([organizationId, status])
+  @@map("drivers")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Customer (Shipper / Load Giver)
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -316,6 +353,7 @@ model Trip {
   id             String     @id @default(uuid())
   organizationId String
   vehicleId      String
+  driverId       String?
   routeId        String?
   customerId     String?
   commodityId    String?
@@ -339,9 +377,12 @@ model Trip {
   estimatedFreight  Decimal? @db.Decimal(12, 2)
   actualFreight     Decimal? @db.Decimal(12, 2)
 
-  // Driver (optional link + free-text name for history)
+  // Driver snapshot for history (survives driver record changes) + optional user link
   driverName   String?
   driverUserId String?
+
+  // Business memory flags
+  isEmptyReturn Boolean @default(false)
 
   notes     String?
   createdAt DateTime @default(now())
@@ -349,6 +390,7 @@ model Trip {
 
   organization Organization @relation(fields: [organizationId], references: [id])
   vehicle      Vehicle      @relation(fields: [vehicleId], references: [id])
+  driver       Driver?      @relation(fields: [driverId], references: [id])
   route        Route?       @relation(fields: [routeId], references: [id])
   customer     Customer?    @relation(fields: [customerId], references: [id])
   commodity    Commodity?   @relation(fields: [commodityId], references: [id])
@@ -360,6 +402,7 @@ model Trip {
   @@unique([organizationId, tripNumber])
   @@index([organizationId])
   @@index([vehicleId])
+  @@index([driverId])
   @@index([customerId])
   @@index([status])
   @@index([startDate])

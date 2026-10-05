@@ -3,7 +3,23 @@ import { PrismaService } from '@/database/prisma.service';
 import type { Prisma, Trip } from '@prisma/client';
 
 export const TRIP_WITH_RELATIONS = {
-  vehicle: { select: { id: true, registrationNumber: true, vehicleType: true } },
+  vehicle: {
+    select: {
+      id: true,
+      registrationNumber: true,
+      vehicleType: true,
+      status: true,
+    },
+  },
+  driver: {
+    select: {
+      id: true,
+      name: true,
+      phone: true,
+      status: true,
+      licenseNumber: true,
+    },
+  },
   customer: { select: { id: true, name: true } },
   commodity: { select: { id: true, name: true, category: true } },
   route: { select: { id: true, estimatedDistance: true, tollEstimate: true } },
@@ -24,6 +40,8 @@ export class TripRepository {
     organizationId: string,
     filters?: {
       vehicleId?: string;
+      driverId?: string;
+      customerId?: string;
       status?: string;
       startDate?: Date;
       endDate?: Date;
@@ -33,6 +51,8 @@ export class TripRepository {
       where: {
         organizationId,
         ...(filters?.vehicleId && { vehicleId: filters.vehicleId }),
+        ...(filters?.driverId && { driverId: filters.driverId }),
+        ...(filters?.customerId && { customerId: filters.customerId }),
         ...(filters?.status && { status: filters.status as never }),
         ...(filters?.startDate || filters?.endDate
           ? {
@@ -46,6 +66,7 @@ export class TripRepository {
       orderBy: { startDate: 'desc' },
       include: {
         vehicle: { select: { id: true, registrationNumber: true } },
+        driver: { select: { id: true, name: true } },
         customer: { select: { id: true, name: true } },
         commodity: { select: { id: true, name: true } },
       },
@@ -64,30 +85,38 @@ export class TripRepository {
     return this.prisma.trip.update({ where: { id }, data });
   }
 
-  getLatestTripNumber(organizationId: string): Promise<{ tripNumber: string } | null> {
-    return this.prisma.trip.findFirst({
-      where: { organizationId },
-      orderBy: { createdAt: 'desc' },
-      select: { tripNumber: true },
+  countByStatus(organizationId: string, status: Prisma.EnumTripStatusFilter['equals']) {
+    return this.prisma.trip.count({ where: { organizationId, status } });
+  }
+
+  countStartingOnDay(organizationId: string, dayStart: Date, dayEnd: Date) {
+    return this.prisma.trip.count({
+      where: {
+        organizationId,
+        startDate: { gte: dayStart, lt: dayEnd },
+      },
     });
   }
 
-  /**
-   * Aggregates trip financial data for a vehicle within a date range.
-   * Used by the finance reporting service.
-   */
   getFinancialAggregateByVehicle(
     organizationId: string,
     vehicleId: string,
-    startDate: Date,
-    endDate: Date,
+    startDate?: Date,
+    endDate?: Date,
   ) {
     return this.prisma.trip.findMany({
       where: {
         organizationId,
         vehicleId,
-        startDate: { gte: startDate, lte: endDate },
         status: 'COMPLETED',
+        ...(startDate || endDate
+          ? {
+              startDate: {
+                ...(startDate && { gte: startDate }),
+                ...(endDate && { lte: endDate }),
+              },
+            }
+          : {}),
       },
       select: {
         id: true,
@@ -103,21 +132,25 @@ export class TripRepository {
     });
   }
 
-  /**
-   * Aggregates trip financial data across the fleet within a date range.
-   */
   getFinancialAggregateByOrganization(
     organizationId: string,
-    startDate: Date,
-    endDate: Date,
+    startDate?: Date,
+    endDate?: Date,
     vehicleId?: string,
   ) {
     return this.prisma.trip.findMany({
       where: {
         organizationId,
         ...(vehicleId && { vehicleId }),
-        startDate: { gte: startDate, lte: endDate },
         status: 'COMPLETED',
+        ...(startDate || endDate
+          ? {
+              startDate: {
+                ...(startDate && { gte: startDate }),
+                ...(endDate && { lte: endDate }),
+              },
+            }
+          : {}),
       },
       select: {
         id: true,
@@ -125,6 +158,7 @@ export class TripRepository {
         actualFreight: true,
         estimatedFreight: true,
         actualDistanceKm: true,
+        estimatedDistanceKm: true,
         loadWeightTons: true,
         expenses: { select: { type: true, amount: true } },
         fuelTransactions: { select: { litres: true, totalAmount: true } },

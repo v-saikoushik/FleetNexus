@@ -18,7 +18,13 @@ import { CustomerService } from './customer.service';
 import { CreateCustomerDto } from './dto/create-customer.dto';
 import { UpdateCustomerDto } from './dto/update-customer.dto';
 
-const READ_ROLES = ['SUPER_ADMIN', 'FLEET_OWNER', 'FACTORY_MANAGER', 'UNION_MANAGER', 'DRIVER'] as const;
+const READ_ROLES = [
+  'SUPER_ADMIN',
+  'FLEET_OWNER',
+  'FACTORY_MANAGER',
+  'UNION_MANAGER',
+  'DRIVER',
+] as const;
 const MANAGE_ROLES = ['SUPER_ADMIN', 'FLEET_OWNER'] as const;
 
 @Controller('customers')
