@@ -20,6 +20,10 @@ export class CreateExpenseDto {
 
   @IsOptional()
   @IsUUID()
+  driverId?: string;
+
+  @IsOptional()
+  @IsUUID()
   tripId?: string;
 
   @IsOptional()

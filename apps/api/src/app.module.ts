@@ -11,6 +11,17 @@ import { VehicleModule } from './modules/vehicles/vehicle.module';
 import { CustomerModule } from './modules/customers/customer.module';
 import { DriverModule } from './modules/drivers/driver.module';
 import { TripModule } from './modules/trips/trip.module';
+import { ExpenseModule } from './modules/expenses/expense.module';
+import { PaymentModule } from './modules/payments/payment.module';
+import { FinanceModule } from './modules/finance/finance.module';
+import { BusinessMemoryModule } from './modules/intelligence/business-memory.module';
+import { CostIntelligenceModule } from './modules/intelligence/cost-intelligence.module';
+import { RouteIntelligenceModule } from './modules/intelligence/route-intelligence.module';
+import { SeasonalityModule } from './modules/intelligence/seasonality.module';
+import { ForecastingModule } from './modules/intelligence/forecasting.module';
+import { LoadProfitabilityModule } from './modules/intelligence/load-profitability.module';
+import { DecisionSupportModule } from './modules/intelligence/decision-support.module';
+import { OutcomeTrackingModule } from './modules/intelligence/outcome-tracking.module';
 import { validateEnv } from './config/env.validation';
 
 @Module({
@@ -45,6 +56,17 @@ import { validateEnv } from './config/env.validation';
     CustomerModule,
     DriverModule,
     TripModule,
+    ExpenseModule,
+    PaymentModule,
+    FinanceModule,
+    BusinessMemoryModule,
+    CostIntelligenceModule,
+    RouteIntelligenceModule,
+    SeasonalityModule,
+    ForecastingModule,
+    LoadProfitabilityModule,
+    DecisionSupportModule,
+    OutcomeTrackingModule,
   ],
 })
 export class AppModule {}

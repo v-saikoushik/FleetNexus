@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   Injectable,
   NotFoundException,
@@ -7,6 +8,7 @@ import {
 import type { TripStatus } from '@prisma/client';
 import { PrismaService } from '@/database/prisma.service';
 import { ProfitabilityUtil } from '@/modules/intelligence/profitability/profitability.util';
+import { PaymentCollectionUtil } from '@/modules/payments/payment-collection.util';
 import { TripRepository } from './trip.repository';
 import type { CreateTripDto } from './dto/create-trip.dto';
 import type { UpdateTripDto } from './dto/update-trip.dto';
@@ -126,12 +128,328 @@ export class TripService {
         trip.loadWeightTons != null ? ProfitabilityUtil.toNumber(trip.loadWeightTons) : null,
     });
 
-    return { ...trip, profitability };
+    const collectionSummary = PaymentCollectionUtil.calculate(
+      trip.actualFreight ?? trip.estimatedFreight,
+      trip.payments,
+    );
+
+    return { ...trip, profitability, collectionSummary };
+  }
+
+  async reviewFinancials(organizationId: string, id: string) {
+    const trip = await this.trips.findByIdForOrganization(id, organizationId);
+    if (!trip) throw new NotFoundException('Trip not found');
+    const report = this.buildFinancialReview(trip);
+    let financialStatus = trip.financialStatus;
+    if (financialStatus !== 'FINALIZED') {
+      financialStatus = report.ready ? 'READY_FOR_REVIEW' : 'OPEN';
+      await this.prisma.trip.updateMany({
+        where: { id, organizationId, financialStatus: { not: 'FINALIZED' } },
+        data: { financialStatus },
+      });
+    }
+    return {
+      ...report,
+      financialStatus,
+      completeness: { ...report.completeness, expensesReviewed: true },
+    };
+  }
+
+  async finalizeFinancials(organizationId: string, id: string, userId: string) {
+    const trip = await this.trips.findByIdForOrganization(id, organizationId);
+    if (!trip) throw new NotFoundException('Trip not found');
+    const report = this.buildFinancialReview(trip);
+    if (trip.financialStatus === 'FINALIZED') {
+      return {
+        status: 'FINALIZED' as const,
+        tripId: trip.id,
+        financialStatus: 'FINALIZED' as const,
+        financialFinalizedAt: trip.financialFinalizedAt,
+        financialSummary: report.financialSummary,
+        blockingIssues: [],
+      };
+    }
+    const blockingIssues = [...report.blockingIssues];
+    if (trip.financialStatus !== 'READY_FOR_REVIEW') {
+      blockingIssues.unshift('Complete the financial review before finalizing.');
+    }
+    if (blockingIssues.length) {
+      if (trip.financialStatus === 'READY_FOR_REVIEW') {
+        await this.prisma.trip.updateMany({
+          where: { id, organizationId, financialStatus: 'READY_FOR_REVIEW' },
+          data: { financialStatus: 'OPEN' },
+        });
+      }
+      return {
+        status: 'NOT_READY' as const,
+        tripId: trip.id,
+        financialStatus:
+          trip.financialStatus === 'READY_FOR_REVIEW' ? ('OPEN' as const) : trip.financialStatus,
+        blockingIssues,
+        financialSummary: report.financialSummary,
+      };
+    }
+    const finalizedAt = new Date();
+    const updated = await this.prisma.trip.updateMany({
+      where: { id, organizationId, status: 'COMPLETED', financialStatus: 'READY_FOR_REVIEW' },
+      data: {
+        financialStatus: 'FINALIZED',
+        financialFinalizedAt: finalizedAt,
+        financialFinalizedById: userId,
+      },
+    });
+    if (!updated.count) {
+      const latest = await this.trips.findByIdForOrganization(id, organizationId);
+      if (latest?.financialStatus === 'FINALIZED') {
+        return {
+          status: 'FINALIZED' as const,
+          tripId: id,
+          financialStatus: 'FINALIZED' as const,
+          financialFinalizedAt: latest.financialFinalizedAt,
+          financialSummary: report.financialSummary,
+          blockingIssues: [],
+        };
+      }
+      return {
+        status: 'NOT_READY' as const,
+        tripId: id,
+        financialStatus: latest?.financialStatus ?? 'OPEN',
+        blockingIssues: ['Trip status or review changed. Review the financials again.'],
+        financialSummary: report.financialSummary,
+      };
+    }
+    return {
+      status: 'FINALIZED' as const,
+      tripId: id,
+      financialStatus: 'FINALIZED' as const,
+      financialFinalizedAt: finalizedAt,
+      financialSummary: report.financialSummary,
+      blockingIssues: [],
+    };
+  }
+
+  async reopenFinancials(organizationId: string, id: string) {
+    const trip = await this.trips.findByIdForOrganization(id, organizationId);
+    if (!trip) throw new NotFoundException('Trip not found');
+    if (trip.financialStatus !== 'FINALIZED') {
+      throw new ConflictException('Only finalized trip financials can be reopened');
+    }
+    await this.prisma.trip.updateMany({
+      where: { id, organizationId, financialStatus: 'FINALIZED' },
+      data: { financialStatus: 'OPEN', financialFinalizedAt: null, financialFinalizedById: null },
+    });
+    return {
+      tripId: id,
+      financialStatus: 'OPEN' as const,
+      message: 'Financials reopened. Review and finalize again after corrections.',
+    };
+  }
+
+  private buildFinancialReview(
+    trip: NonNullable<Awaited<ReturnType<TripRepository['findByIdForOrganization']>>>,
+  ) {
+    const expenses = trip.expenses;
+    const fuels = trip.fuelTransactions;
+    const expenseCost = (types: string[]) =>
+      expenses
+        .filter((item) => types.includes(item.type))
+        .reduce((sum, item) => sum + ProfitabilityUtil.toNumber(item.amount), 0);
+    const category = (amount: number, count: number) => ({
+      amount: round2(amount),
+      recordCount: count,
+      status: count ? ('RECORDED' as const) : ('MISSING' as const),
+    });
+    const fuel = category(
+      expenseCost(['FUEL']) +
+        fuels.reduce((sum, item) => sum + ProfitabilityUtil.toNumber(item.totalAmount), 0),
+      expenses.filter((item) => item.type === 'FUEL').length + fuels.length,
+    );
+    const toll = category(
+      expenseCost(['TOLL']),
+      expenses.filter((item) => item.type === 'TOLL').length,
+    );
+    const driver = category(
+      expenseCost(['DRIVER_ALLOWANCE', 'DRIVER_SALARY', 'FOOD_ALLOWANCE']),
+      expenses.filter((item) =>
+        ['DRIVER_ALLOWANCE', 'DRIVER_SALARY', 'FOOD_ALLOWANCE'].includes(item.type),
+      ).length,
+    );
+    const loading = category(
+      expenseCost(['LOADING']),
+      expenses.filter((item) => item.type === 'LOADING').length,
+    );
+    const unloading = category(
+      expenseCost(['UNLOADING']),
+      expenses.filter((item) => item.type === 'UNLOADING').length,
+    );
+    const maintenance = category(
+      expenseCost(['MAINTENANCE', 'REPAIRS', 'TYRES']),
+      expenses.filter((item) => ['MAINTENANCE', 'REPAIRS', 'TYRES'].includes(item.type)).length,
+    );
+    const knownTypes = new Set([
+      'FUEL',
+      'TOLL',
+      'DRIVER_ALLOWANCE',
+      'DRIVER_SALARY',
+      'FOOD_ALLOWANCE',
+      'LOADING',
+      'UNLOADING',
+      'MAINTENANCE',
+      'REPAIRS',
+      'TYRES',
+    ]);
+    const otherItems = expenses.filter((item) => !knownTypes.has(item.type));
+    const other = category(
+      otherItems.reduce((sum, item) => sum + ProfitabilityUtil.toNumber(item.amount), 0),
+      otherItems.length,
+    );
+    const breakdown = ProfitabilityUtil.buildExpensesFromRecords(expenses, fuels);
+    const totalExpenses = round2(ProfitabilityUtil.calculateTotalCost(breakdown));
+    const actualRevenue =
+      trip.actualFreight === null ? null : ProfitabilityUtil.toNumber(trip.actualFreight);
+    const estimatedRevenue =
+      trip.estimatedFreight === null ? null : ProfitabilityUtil.toNumber(trip.estimatedFreight);
+    const displayedRevenue = actualRevenue ?? estimatedRevenue;
+    const revenueBasis =
+      actualRevenue !== null ? 'ACTUAL' : estimatedRevenue !== null ? 'ESTIMATED' : 'MISSING';
+    const actualDistance =
+      trip.actualDistanceKm === null ? null : ProfitabilityUtil.toNumber(trip.actualDistanceKm);
+    const estimatedDistance =
+      trip.estimatedDistanceKm === null
+        ? null
+        : ProfitabilityUtil.toNumber(trip.estimatedDistanceKm);
+    const distance = actualDistance ?? estimatedDistance;
+    const distanceBasis =
+      actualDistance !== null ? 'ACTUAL' : estimatedDistance !== null ? 'ESTIMATED' : 'MISSING';
+    const recorded =
+      actualRevenue === null
+        ? null
+        : ProfitabilityUtil.calculateTripProfitability(
+            actualRevenue,
+            breakdown,
+            actualDistance ?? undefined,
+          );
+    const estimated =
+      actualRevenue !== null || estimatedRevenue === null
+        ? null
+        : ProfitabilityUtil.calculateTripProfitability(
+            estimatedRevenue,
+            breakdown,
+            distance ?? undefined,
+          );
+    const collections = PaymentCollectionUtil.calculate(displayedRevenue, trip.payments);
+    const unresolvedPayments = trip.payments.filter(
+      (payment) => payment.status === 'PENDING' || payment.status === 'OVERDUE',
+    ).length;
+    const blockingIssues: string[] = [];
+    if (trip.status !== 'COMPLETED') blockingIssues.push('Trip must be operationally completed.');
+    if (actualRevenue === null) blockingIssues.push('Actual trip freight is missing.');
+    if (actualDistance === null || actualDistance <= 0)
+      blockingIssues.push('Actual trip distance is missing.');
+    const missingExpenseCategories = Object.entries({
+      fuel,
+      toll,
+      driver,
+      loading,
+      unloading,
+      maintenance,
+      other,
+    })
+      .filter(([, item]) => item.status === 'MISSING')
+      .map(([name]) => name);
+    const warnings = [
+      ...(expenses.length + fuels.length
+        ? []
+        : [
+            'No trip expense or fuel records are available; recorded expenses currently total zero.',
+          ]),
+      ...(missingExpenseCategories.length
+        ? [
+            `No records exist for: ${missingExpenseCategories.join(', ')}. Absence is not treated as verified zero.`,
+          ]
+        : []),
+      ...(trip.payments.length ? [] : ['No payment records are available.']),
+      ...(unresolvedPayments
+        ? [
+            `${unresolvedPayments} payment record(s) are pending or overdue; collection is not finalized.`,
+          ]
+        : []),
+      ...(revenueBasis === 'ESTIMATED'
+        ? ['Revenue is estimated; actual freight is required for finalization.']
+        : []),
+      ...(distanceBasis === 'ESTIMATED'
+        ? ['Distance is estimated; actual distance is required for finalization.']
+        : []),
+    ];
+    return {
+      tripId: trip.id,
+      operationalStatus: trip.status,
+      financialStatus: trip.financialStatus,
+      ready: blockingIssues.length === 0,
+      blockingIssues,
+      warnings,
+      completeness: {
+        freight: { status: revenueBasis, amount: displayedRevenue },
+        distance: { status: distanceBasis, kilometres: distance },
+        expensesReviewed:
+          trip.financialStatus === 'READY_FOR_REVIEW' || trip.financialStatus === 'FINALIZED',
+        payments: {
+          status: !trip.payments.length
+            ? 'MISSING'
+            : unresolvedPayments
+              ? 'UNRESOLVED'
+              : 'RECORDED',
+          recordCount: trip.payments.length,
+        },
+      },
+      missingExpenseCategories,
+      financialSummary: {
+        revenue: displayedRevenue === null ? null : round2(displayedRevenue),
+        revenueBasis,
+        paymentsReceived: collections.received,
+        outstanding: collections.outstanding,
+        expenses: {
+          fuel,
+          toll,
+          driver,
+          loading,
+          unloading,
+          maintenance,
+          other,
+          total: totalExpenses,
+        },
+        recordedProfit: recorded ? round2(recorded.profit) : null,
+        recordedMarginPct:
+          recorded?.marginPct === null || recorded?.marginPct === undefined
+            ? null
+            : round2(recorded.marginPct),
+        costPerKm:
+          recorded?.costPerKm === null || recorded?.costPerKm === undefined
+            ? null
+            : round2(recorded.costPerKm),
+        profitPerKm:
+          recorded?.profitPerKm === null || recorded?.profitPerKm === undefined
+            ? null
+            : round2(recorded.profitPerKm),
+        estimatedProfit: estimated ? round2(estimated.profit) : null,
+        distanceKm: distance,
+        distanceBasis,
+      },
+    };
   }
 
   async update(organizationId: string, id: string, dto: UpdateTripDto) {
     const existing = await this.trips.findByIdForOrganization(id, organizationId);
     if (!existing) throw new NotFoundException('Trip not found');
+
+    if (
+      existing.financialStatus === 'FINALIZED' &&
+      Object.keys(dto).some((key) => key !== 'notes')
+    ) {
+      throw new ConflictException(
+        'Trip financials are finalized. Reopen financials before editing trip data.',
+      );
+    }
 
     if (existing.status === 'CANCELLED') {
       throw new BadRequestException('Cannot update a cancelled trip');
@@ -174,6 +492,8 @@ export class TripService {
       !nextStatus && assigningDriver && existing.status === 'PLANNED' ? 'ASSIGNED' : nextStatus;
 
     return this.trips.update(id, organizationId, {
+      ...(existing.financialStatus === 'READY_FOR_REVIEW' &&
+        Object.keys(dto).some((key) => key !== 'notes') && { financialStatus: 'OPEN' }),
       ...(resolvedStatus !== undefined && { status: resolvedStatus }),
       ...(dto.vehicleId !== undefined && { vehicle: { connect: { id: dto.vehicleId } } }),
       ...(dto.driverId !== undefined && {

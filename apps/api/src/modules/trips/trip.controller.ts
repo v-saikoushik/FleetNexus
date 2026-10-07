@@ -92,6 +92,36 @@ export class TripController {
     return { success: true, data: trip, message: 'Trip completed successfully' };
   }
 
+  @Post(':id/financial-review')
+  @Roles(...MANAGE_ROLES)
+  async reviewFinancials(
+    @CurrentUser() user: RequestUser,
+    @Param('id', new ParseUUIDPipe()) id: string,
+  ) {
+    return { success: true, data: await this.trips.reviewFinancials(this.orgId(user), id) };
+  }
+
+  @Post(':id/finalize-financials')
+  @Roles(...MANAGE_ROLES)
+  async finalizeFinancials(
+    @CurrentUser() user: RequestUser,
+    @Param('id', new ParseUUIDPipe()) id: string,
+  ) {
+    return {
+      success: true,
+      data: await this.trips.finalizeFinancials(this.orgId(user), id, user.userId),
+    };
+  }
+
+  @Post(':id/reopen-financials')
+  @Roles(...MANAGE_ROLES)
+  async reopenFinancials(
+    @CurrentUser() user: RequestUser,
+    @Param('id', new ParseUUIDPipe()) id: string,
+  ) {
+    return { success: true, data: await this.trips.reopenFinancials(this.orgId(user), id) };
+  }
+
   private orgId(user: RequestUser): string {
     if (!user.organizationId)
       throw new ForbiddenException('An organization is required for trip access');

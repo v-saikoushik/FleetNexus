@@ -8,7 +8,12 @@ import {
   MaxLength,
   Min,
 } from 'class-validator';
-import { PAYMENT_STATUSES, type PaymentStatus } from '@fleetnexus/shared';
+import {
+  PAYMENT_METHODS,
+  PAYMENT_STATUSES,
+  type PaymentMethod,
+  type PaymentStatus,
+} from '@fleetnexus/shared';
 
 export class CreatePaymentDto {
   @IsUUID()
@@ -18,13 +23,17 @@ export class CreatePaymentDto {
   @IsUUID()
   customerId?: string;
 
-  @IsNumber()
+  @IsNumber({ maxDecimalPlaces: 2 })
   @Min(0.01)
   amount!: number;
 
   @IsOptional()
   @IsEnum(PAYMENT_STATUSES)
   status?: PaymentStatus;
+
+  @IsOptional()
+  @IsEnum(PAYMENT_METHODS)
+  paymentMethod?: PaymentMethod;
 
   @IsOptional()
   @IsDateString()

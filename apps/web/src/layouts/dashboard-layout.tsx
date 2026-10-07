@@ -22,6 +22,33 @@ export function DashboardLayout() {
           <Link to="/intelligence" className="block px-3 py-2 rounded-md text-sm font-medium text-slate-700 hover:bg-slate-100">
             Business Intelligence
           </Link>
+          <Link to="/finance" className="block px-3 py-2 rounded-md text-sm font-medium text-slate-700 hover:bg-slate-100">
+            Finance
+          </Link>
+          <Link to="/trips/financials" className="block px-3 py-2 rounded-md text-sm font-medium text-slate-700 hover:bg-slate-100">
+            Trip Financial Review
+          </Link>
+          <Link to="/intelligence/costs" className="block px-3 py-2 rounded-md text-sm font-medium text-slate-700 hover:bg-slate-100">
+            Cost Intelligence
+          </Link>
+          <Link to="/intelligence/routes" className="block px-3 py-2 rounded-md text-sm font-medium text-slate-700 hover:bg-slate-100">
+            Route Intelligence
+          </Link>
+          <Link to="/intelligence/seasonality" className="block px-3 py-2 rounded-md text-sm font-medium text-slate-700 hover:bg-slate-100">
+            Seasonality &amp; Demand
+          </Link>
+          <Link to="/intelligence/forecasting" className="block px-3 py-2 rounded-md text-sm font-medium text-slate-700 hover:bg-slate-100">
+            Demand Forecasting
+          </Link>
+          <Link to="/intelligence/load-profitability" className="block px-3 py-2 rounded-md text-sm font-medium text-slate-700 hover:bg-slate-100">
+            Load Profitability
+          </Link>
+          <Link to="/intelligence/load-decision" className="block px-3 py-2 rounded-md text-sm font-medium text-slate-700 hover:bg-slate-100">
+            Decision Support
+          </Link>
+          <Link to="/intelligence/outcomes" className="block px-3 py-2 rounded-md text-sm font-medium text-slate-700 hover:bg-slate-100">
+            Load Outcomes
+          </Link>
         </nav>
       </aside>
 

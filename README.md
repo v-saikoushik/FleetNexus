@@ -4,7 +4,7 @@ FleetNexus is a transport ERP foundation for factories, lorry unions, fleet owne
 
 ## Current status
 
-The monorepo, identity schema, and authentication foundation are implemented. Public registration always creates a `FLEET_OWNER`; public clients cannot choose or self-assign roles. Vehicle, driver, trip, finance, document, reporting, and integration modules have not started.
+The monorepo, identity/authentication foundation, and vehicle, customer, driver, and trip APIs are implemented. Public registration always creates a `FLEET_OWNER`; public clients cannot choose or self-assign roles. The Prisma schema includes business-memory and finance models, with migrations now covering the current schema. Expense and payment APIs, document management, reporting, and integrations remain future work.
 
 ## Requirements
 
@@ -67,6 +67,7 @@ pnpm docker:down
 
 ## Current limitations
 
-- PostgreSQL must be running and the identity migration applied before live registration, login, and current-user flows can be exercised.
+- PostgreSQL must be running and migrations applied before live registration, login, and operational flows can be exercised.
+- Expense and payment persistence models exist, but their API modules are not implemented yet.
 - No administrative role-assignment API exists yet; privileged roles require a future authenticated administration workflow.
 - Vite/esbuild requires normal filesystem access to its configuration. Local security restrictions can prevent the web build from starting.
